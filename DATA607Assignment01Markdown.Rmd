@@ -1,0 +1,114 @@
+---
+title: "DATA607Assignment01RMD"
+author: "Kaylie Evans"
+date: "Feb 01, 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+The article _According To Super Bowl Ads, Americans Love America, Animals And Sex_ [https://projects.fivethirtyeight.com/super-bowl-ads/] references a data set that was manually collected by the website that published it. The data includes observations about 10 brands' individual super bowl ads from 2000 to 2020. There are seven variables that the FiveThirtyEight team - descriptions for each of them can be found in the article.
+
+
+## Load libraries
+```{r loading libraries}
+library(tidyverse)
+```
+
+## Import the CSV file
+
+Saving the data set as 'sbc' for super bowl commercials. 
+
+View function to see the data
+```{r import csv file from url}
+sbc <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/superbowl-ads/main/superbowl-ads.csv", sep = ',')
+glimpse(sbc)
+```
+
+## Cleaning the data
+From the view, it can be seen that some values are missing. To tell R that these values are null, the na = "" is used.
+
+The 7 characteristics tested are all True or False values, so those column types should be cleaned to logical.
+
+The right most column titled na is full of null values, this column can be dropped.
+
+```{r clean sbc data frame}
+sbc <- sbc |>
+  mutate(
+    #empty cells recognized as null
+    na = "",
+    #all 7 columns converted to logical type
+    funny = as.logical(funny),
+    show_product_quickly = as.logical(show_product_quickly),
+    patriotic = as.logical(patriotic),
+    celebrity = as.logical(celebrity),
+    danger = as.logical(danger),
+    animals = as.logical(animals),
+    use_sex = as.logical(use_sex)
+    )
+
+#drop the null column 
+sbc <- sbc[-12]
+
+#quick view of the updated data set
+glimpse(sbc)
+```
+## Let's take a look at one randomly selected row
+```{r analyze single row}
+single_sbc <- sbc[2,]
+glimpse(single_sbc)
+```
+
+We can see this set of observations are from a Bud Light commercial in 2020. The video contains elements that are funny, show the product in the first 10 seconds of the commercial, it features a recognizable celebrity, and it involves danger through violence, threats of violence, injuries, fighting or guns.
+
+## What can we see through graphs?
+
+The below charts show the frequency of commercials per brand and the ratio that each brand has for the 7 specific measures.
+```{r stacked bar chart}
+# funny
+ggplot(sbc, aes(x = brand, fill = funny)) +
+geom_bar() + 
+labs(title = "Commercial Funny Counts Per Brand") 
+
+# show_product_quickly
+ggplot(sbc, aes(x = brand, fill = show_product_quickly)) +
+geom_bar() + 
+labs(title = "Commercial Product Being Shown Counts Per Brand") 
+
+# patriotic
+ggplot(sbc, aes(x = brand, fill = patriotic)) +
+geom_bar() + 
+labs(title = "Commercial Patriotic Counts Per Brand") 
+
+# celebrity
+ggplot(sbc, aes(x = brand, fill = celebrity)) +
+geom_bar() + 
+labs(title = "Commercial Celebrity Counts Per Brand") 
+
+# danger
+ggplot(sbc, aes(x = brand, fill = danger)) +
+geom_bar() + 
+labs(title = "Commercial Danger Counts Per Brand") 
+
+# animals
+ggplot(sbc, aes(x = brand, fill = animals)) +
+geom_bar() + 
+labs(title = "Commercial Animals Counts Per Brand") 
+
+# use_sex
+ggplot(sbc, aes(x = brand, fill = use_sex)) +
+geom_bar() + 
+labs(title = "Commercial Sex Usage Counts Per Brand") 
+
+```
+
+# Findings and Recommendations 
+From the data available here, the article analyzes the intersections between different qualities of commercials. 
+To extend the data, I would suggest including more qualities for the commercials. Perhaps, the addition of a _use of technology_ category would be a good addition, where the commercial is marked True when it alludes to the use of AI or futuristic design.
+
+In order to verify that the categories are correctly marked True and False, sending the first three columns to another group of people to have them mark the same qualities for each video.
+
+Finally, to update the work I would suggest taking a look at what the analyzed brands have as their core values and compare these to their breakdown above. Another way to update the data would be to include other prominent brands in addition to the current list.

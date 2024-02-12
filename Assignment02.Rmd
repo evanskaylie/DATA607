@@ -1,0 +1,46 @@
+---
+title: "Assignment02"
+author: "Kaylie Evans"
+date: "2024-02-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Load the library
+```{r library load}
+library(RMySQL)
+library(tidyverse)
+```
+
+### Connect the database
+Making the connection through the MySQL package to the azure database. Saving the connection as mydb for reference later.
+```{r database connection}
+mydb <- dbConnect(MySQL(), user='kaylie.evans64',password='PasswordDATA607',dbname='kaylie.evans64',host='cunydata607sql.mysql.database.azure.com')
+```
+
+
+### Add the table with my data to R as data frame
+Also opening up the movies df to see what the table transfer looks like
+```{r df load}
+movies <- dbReadTable(mydb,'movie_data')
+movies
+```
+There are 2 null values for Avatar: The Way of Water (2022), and it looks like R has properly read them as null.
+
+### Missing Data Strategy
+There are a few missing data strategies that would work for this situation, all with their own pros and cons. Here, I am going to use the method for filtering out the entire row that has null values. This will get rid of the only movie with missing data. 
+```{r missing data removal}
+#where exactly are any null values?
+is.na(movies)
+
+#remove those rows 
+movies |>
+  filter(!is.na(LANCE))
+```
+
+### Missing Data Strategy Reasoning: Removing the Movie
+I chose to remove the entire movie data for a few reasons. In case of missing data, I chose more than 6 movies. This means that after filtering out the data, the number of movies still reaches the guidelines. During the data collection, the 2 missing values were noted as missing not because they had an especially good or bad expectation for the movie, just that they hadn't seen it. The major issue is with the removed set of numbers that were not null. In the view, we can see that BROCK's highest rating was for the removed row so that data is now not able to be part of the analysis. 

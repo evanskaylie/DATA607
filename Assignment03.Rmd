@@ -1,0 +1,105 @@
+---
+title: "Assignment 3"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load library
+```{r load library}
+library(tidyverse)
+```
+
+## 1: Identify majors that contain either "DATA" or "STATISTICS" 
+
+### Save the Data Set
+```{r saving data set}
+mjrs <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/all-ages.csv", sep = ',')
+head(mjrs)
+```
+
+### Create the subset that shows DATA and STATISTICS containing majors
+```{r DATA and STATISTICS subset}
+#using str_view to find majors that contain data or statistics and saving that as a new object
+Data_And_Stat_Majors <- str_view(mjrs$Major, "DATA|STATISTICS")
+Data_And_Stat_Majors
+```
+
+
+## 2: Transform data from one format to another 
+
+### Get the original format for the data
+```{r original fruit}
+#save the data set from the problem in the original format
+original_fruit <- fruit |>
+  str_subset("bell pepper|bilberry|blackberry|blood orange|blueberry|cantaloupe|chili pepper|cloudberry|elderberry|lime|lychee|mulberry|olive|salal berry"
+  ) 
+
+#view the data that was saved
+original_fruit
+```
+
+### Transform the original format to the requested format
+```{r transform code}
+#adding commas to the vector
+flat_fruit <- str_c(c(original_fruit),", ")
+
+#flattening the vector to a string
+flat_fruit <- str_flatten(c(flat_fruit))
+
+#dropping the extra comma and space from the end of the string
+new_fruit <- str_sub(flat_fruit,1,-3)
+
+#view the new data
+new_fruit
+```
+
+
+## 3: Describe in words what the expressions will match
+
+(.)\1\1 
+  This will match when a character is repeated 3 times. The (.) refers to any character, and the \1 and \1 refer to the 1st index's captured value. For example, ddd and 888. This is assuming it is surrounded by quotation marks in the regex.
+  
+"(.)(.)\\2\\1"
+  This will match any sequence of 4 characters where the 1st and 4th characters are the same, and the 2nd and 3rd characters are the same. For example, abba, 6226, and 5555.
+  
+(..)\1
+  This will match any sequence of 2 characters that is repeated. Meaning any 2 character values repeated in the same order directly after the original time. For instance, 5656 and haha. This is assuming it is surrounded by quotation marks in the regex.
+  
+"(.).\\1.\\1"
+  This will match a series of characters where the 1st, 3rd, and 5th characters are all the same value. The 2nd and 4th characters can have any value. Ex: pipop and 39303.
+  
+"(.)(.)(.).*\\3\\2\\1"
+  This will match where there is a series of any 3 characters, followed by any number of any characters (including 0 times), followed by the first 3 characters in reverse order. Ex: racecar, striperts and 6789202876.
+  
+
+## 4: Constructing regular expressions to match specific words
+
+### Load dataframe with words to sort through
+```{r saving words data}
+wdf <- words
+```
+
+### Creating regular expressions 
+Words that start and end with the same character:
+```{r words with same start and end}
+wdf |>
+  str_view("^(.).*\\1$")
+```
+
+Words that contain a repeated pair of letters
+```{r words repeated pairs of letters}
+wdf |>
+  str_view("(..).*\\1")
+```
+
+Words that contain one letter repeated in at least three places
+```{r words repeated letters}
+wdf |>
+  str_view("(.).*\\1.*\\1")
+```

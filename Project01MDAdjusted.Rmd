@@ -1,0 +1,256 @@
+---
+title: "Project01"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction:
+Saved on Kaylie's public GitHub is a .txt file with chess tournament results. This R Markdown takes that file, cleans it, transforms it, summarizes it, and exports the result as a .csv file. The final file will have the following columns: Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents. That file does not have headers.
+
+
+## Load necessary libraries
+```{r load-libraries}
+library(tidyverse)
+```
+
+
+## Read the text file, clean it, and save as a data frame
+
+Reading the text file:
+```{r read-txt-file}
+#Read the txt file and save as object
+data_read <- read_lines(
+          file = "https://raw.githubusercontent.com/evanskaylie/DATA607/main/Project01PlayerInfo",
+          skip = 4
+        )
+```
+
+Delimit and clean the data:
+```{r clean-data-delimit}
+#Split the data on the row delimiter "------"
+data_column <- str_split(
+                  data_read, 
+                  pattern = "-----", 
+                  simplify = TRUE
+                )
+
+#Remove empty rows
+data_column <- data_column[!data_column == ""]
+
+#Convert character column to a data frame
+df <- as.data.frame(data_column)
+
+#Separate the column with the | delimiter
+df <- df |>
+  separate(
+    col = data_column, 
+    into = paste0("col", 1:10), 
+    sep = "\\|", 
+    convert = TRUE
+  )
+
+#Show the data frame
+head(df)
+```
+The above data frame is not tidy. That is to say there are multiple rows that contain a single observation. Exactly 2 rows contain each observation. One solution is to widen the data frame and shorten it, both by exactly twice and half as much, respectively.
+
+
+Now take each even row, and glue it to the end of the odd row above it to create a tidy data frame:
+```{r clean-data-bind}
+#Identify every other row using seq()
+rows_to_keep <- seq(2, nrow(df), by = 2)
+
+#Select the rows to keep as a data frame
+df_to_add <- df[rows_to_keep, ]
+
+#Rename the columns of df_to_add to avoid conflicts
+colnames(df_to_add) <- paste0(colnames(df_to_add), "_ext")
+
+# Bind the selected rows to the row above
+df <- bind_cols(df[-rows_to_keep, ], df_to_add)
+
+#Keep only the 64 cells that contain values
+df <- df[1:64,]
+
+#Preview of data
+head(df)
+```
+
+Now the data is clean enough to start the analysis.
+
+
+## Get information for the summarized data frame
+In order, the below chunks will collect data frames and character vectors that give the following information: **Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents**
+
+1: Player's Name
+```{r get-player-names}
+#Save player names as a character vector
+player_name <- df$col2
+
+#Find all the alphanumeric values in the row
+player_name <- str_extract_all(player_name, "[[:alnum:]]+[[:space:]]?")
+
+#Flatten the alphanumeric values and remove extra space
+player_name <- player_name |>
+  sapply(paste, collapse = "") |>
+  str_sub(end = -2)
+
+#Preview of data
+head(player_name)
+```
+
+2: Player’s State
+```{r get-player-states}
+#Save player states as a character vector
+player_state <- df$col1_ext
+
+#Find all the alphanumeric values in the row
+player_state <- str_extract_all(player_state, "[[:alnum:]]+")
+
+#Flatten the alphanumeric values 
+player_state <- player_state |>
+  sapply(paste, collapse = "")
+
+#Preview of data
+head(player_state)
+```
+
+3: Total Number of Points
+```{r get-total-player-points}
+#Save player total points as an number vector of doubles
+player_points <- as.double(df$col3)
+
+#Preview of data
+head(player_points)
+```
+
+4: Player’s Pre-Rating
+```{r get-total-player-pre-rating}
+#Save entire row as character vector
+player_pre_rating <- df$col2_ext
+
+##Get the data for pre-rating from the rows
+player_pre_rating <- str_extract_all(player_pre_rating, "[:]\\s+\\d\\d\\d+")
+
+##Remove extra characters, leaving only the rating
+player_pre_rating <- str_extract_all(player_pre_rating, "\\d+")
+
+##Reformat to character vector rather than list
+player_pre_rating <- unlist(player_pre_rating)
+
+#Preview of data
+head(player_pre_rating)
+```
+
+5: Average Pre Chess Rating of Opponents
+
+Because of the direction taken on this R Markdown, this section is going to be a bit more convoluted than the above chunks. It will be separated by stage of the process.
+
+*Save the data for who a competitor had as opponents in the tournament* 
+```{r get-round-opponents}
+#Save each round's number as character vector
+round_opponents <- paste(
+  df$col4,
+  df$col5,
+  df$col6,
+  df$col7,
+  df$col8,
+  df$col9,
+  df$col10
+  )
+
+##Get the data for pre-rating from the rows
+round_opponents <- str_extract_all(round_opponents, "\\d+")
+
+#Pad missing values as NA so data frame conversion works
+max_length <- max(lengths(round_opponents))
+
+round_opponents <- lapply(round_opponents, function(x) {
+  length(x) <- max_length
+  x
+})
+
+#Check on the data
+head(round_opponents)
+```
+*Pivot the data frame, so the data can be combined with opponent pre-chess rates*
+```{r pivot-opponent-index-df}
+#Save the opponent data as a data frame
+opponent_indices <- data.frame(round_opponents)
+
+#Name the columns for pivoting
+names(opponent_indices)[1:64] <- c(1:64)
+
+#Add row names to pivot the data
+row_names_col <- str_c("Round ", 1:7)
+
+#Add row name column to data frame
+opponent_indices <- bind_cols(Round = str_c("Round ", 1:7), opponent_indices)
+
+#Pivot the data frame
+opponent_indices <- opponent_indices |>
+  pivot_longer(
+    cols = !starts_with("Round"),
+    names_to = "Competitor_Index",
+    values_to = "Opponent_Index"
+  )
+
+#Check on the data
+head(opponent_indices)
+```
+*This chunk shows R's VLOOKUP (excel) equivalent to get the opponent rating*
+```{r opponent-rating}
+#Add index column to player pre rating
+opponent_pre_rate <- data.frame(
+                      Opponent_Index = c(1:64),
+                      rate = player_pre_rating
+                    )
+
+#Glue opponent rate to the data frame
+opponent_pre_rate <- merge(opponent_indices, opponent_pre_rate, by = "Opponent_Index")
+```
+
+*Calculating the average pre chess rating of opponents for each competitor*
+```{r player-avg-opponent-rating}
+#Convert the rate column to numeric for calculation
+opponent_pre_rate[, 4] <- sapply(opponent_pre_rate[,4], as.numeric)
+
+#Take the average rate, grouped by competitor
+player_avg_opp_rtg <- opponent_pre_rate |>
+  group_by(Competitor_Index) |>
+  summarise(mean = mean(rate))
+
+#Check on the data
+head(player_avg_opp_rtg)
+```
+
+
+## Prepare and export the .csv file
+
+Concatenate the character vectors into a results object
+```{r all-columns-for-csv}
+#Gluing the necessary objects together
+player_results <- paste(
+  player_name, ",", 
+  player_state, ",", 
+  player_points, ",",
+  player_pre_rating, ",",
+  round(player_avg_opp_rtg$mean, digits = 0)
+     #Rounding the average to match project guidelines
+  )
+
+#Preview data
+head(player_results)
+```
+
+
+Export as .csv file that saves to the user's current working directory
+```{r export-csv}
+#Writing the results to a csv file
+write.csv(player_results, file = "player_results.csv", row.names = F)
+```

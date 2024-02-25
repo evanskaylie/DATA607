@@ -1,0 +1,102 @@
+---
+title: "AssignmentWeek05"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+   This R Markdown takes data from a Blackboard assignment that includes an image of a table. This data is manually built as a data frame, put into a .csv file, and read back into the project. After this, the data needs to be tidied, as the table has each column as different observations, rather than aspects of a single observation.  
+   The table has 5 states as columns, with rows that show airline (2 options) and status (2 options). The frequency of each state, status, and destination state are populated in the cross-sections. In total, there are 7 columns. Tidy data will have 4 columns: airline, status, destination state, and frequency total. 
+
+## Load required packages
+
+```{r load-packages}
+#load tidyverse package
+library(tidyverse)
+```
+
+## 1) Create a .csv file with the provided data
+    To create this .csv file, the data must be manually brought into R. Again, the reference for this data is in the DATA 607 Blackboard assignment file. Row names are set to F here to avoid the creation of the row names, as they will be added as a default when reading the file back into R. The extra column would be redundant.  
+```{r create-airline-csv}
+# create the original data set as a data frame
+  # columns:
+airline = c("ALASKA", NA, NA, "AMWEST",NA)
+status = c("on time", "delayed", NA, "on time", "delayed")
+LosAngeles = c(497, 62, NA,  694, 117)
+Phoenix = c(221, 12, NA, 4840, 415)
+SanDiego = c(212, 20, NA, 383, 65)
+SanFransisco = c(503, 102, NA, 320, 65)
+Seattle= c(1841, 305, NA, 201, 61)
+  # data frame assembly:
+df <- data.frame(airline, status, 
+                  LosAngeles, Phoenix, SanDiego, SanFransisco, Seattle)
+
+# show the table format
+df
+
+# create csv file to working directory
+write.csv(df, file = "airline_comparison_data.csv", row.names = F)
+```
+
+## 2) Read the data into R, tidy, and transform
+    The table includes no value for airline on each second line. To put the name there, fill(airline) is used, which takes the value from the row above and copies it to the row with null data in the airline column. The null row is then dropped. The tidying happens with a pivot_longer function. The columns to pivot longer are the 5 state destinations. See below at the tidied data head that checks the data was properly transformed.
+```{r read-tidy-and-transform}
+# read into R
+airline_df <- read.csv("airline_comparison_data.csv")
+
+# add airline names in null rows
+airline_df <- airline_df |> 
+                fill(airline)
+
+# drop the row that does not have data
+airline_df <- na.omit(airline_df)
+
+# tidy and transform
+airline_df <- airline_df |>
+                pivot_longer(
+                  cols = !c(airline, status),
+                  names_to = "destination",
+                  values_to = "count"
+                )
+
+# check if the data is tidy - should have the 4 columns mentioned in the intro
+head(airline_df)
+``` 
+
+
+## 3) Comparative analysis
+    The below graph takes a look at different aspects of the airline delay frequencies to help the analysis.
+```{r comparitive-graphs, fig.height=10, fig.width=10}
+# isolate arrival delays from on time
+delay_only <- filter(airline_df, status == "delayed")
+ct_helper <- filter(airline_df, status == "on time")
+
+# get the ratio of delayed to total flights for each airline and destination
+delay_ratio <- airline_df |> 
+            filter(status == "on time") |>
+            mutate(
+              ratio = round((delay_only$count / (ct_helper$count + delay_only$count)), 2)
+            )
+
+
+# graph the delays and totals on one bar chart
+ggplot() +
+  geom_col(data = airline_df, 
+           aes(x = destination, y = count, fill = airline, alpha = 0.2),
+           position = "dodge") +
+  geom_col(data = delay_only, 
+           aes(x = destination, y = count, fill = airline),
+           position = "dodge") +
+  geom_text(data = delay_ratio, 
+            aes(x = destination, y = count, label = ratio, group = airline),
+            vjust = -0.5, 
+            position = position_dodge(width = .9))
+```
+**Graph explanation:** The figure above shows how the ratio of delayed flights per airline and destination to total flights for that airline and destination. For instance, the first label is 0.11, which tells us that of all ALASKA airline's flights to Los Angeles, 11% of them were delayed. The less opaque bars show the total flights and the more opaque bars show the delayed flights. 
+
+**Analysis:** In the delay ratios, it can be seen that there is not an instance of ALASKA airlines having a higher ratio of delayed flights than AMWEST airlines. The range of AMWEST delays are 8% to 23%. For ALASKA, that range is 5% to 17%. With these metrics, we can confidently say that any randomly chosen flight on AMWEST is more likely or as likely to be delayed than the same destination on an ALASKA flight.

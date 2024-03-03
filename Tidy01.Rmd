@@ -1,0 +1,160 @@
+---
+title: "Tidy01"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Below is a comprehensive examination of global inflation rates spanning from 1980 to 2024 across 196 countries. We will explore data tidying, thorough cleaning, and a nuanced analysis, with particular emphasis on distinguishing between hyperinflation and non-hyperinflation periods. The data was collected by the World Bank [https://data.worldbank.org/] and transformed on Kaggle by SAZIDUL ISLAM [https://www.kaggle.com/datasets/sazidthe1/global-inflation-data]. 
+
+### Import libraries
+Functions such as pivot_longer in tidyr and filter from dplyr are used in this analysis.
+```{r library-import}
+library(tidyverse)
+library(dplyr)
+```
+
+### Import data
+The data set is a csv file that is pulled from a GitHub link.
+```{r data-import}
+#reading in the data set to an object named after the inflation data set (infl)
+infl <- read.csv("https://raw.githubusercontent.com/evanskaylie/DATA607/main/global_inflation_data%202.csv", sep = ',')
+
+#preview data
+head(infl)
+```
+
+
+### Tidy the data set
+The data set above includes each year as a column. This is untidy as years should not be features of observations. Rather, each year should be its own observation. Tidying this data will have a column for year rather than 46 year columns. Each row will be a single observation for each country and year. 
+```{r tidying}
+#pivot the years to a single column
+infl <- infl |>
+  pivot_longer(
+    cols = !c(country_name, indicator_name),
+    names_to = "year",
+    values_to = "annual_average_inflation_rate"
+  )
+
+#check the data
+head(infl)
+```
+
+
+### Clean the data set 
+Not only was this data not tidy, but it could use some cleaning. The year values include an X in front of each number. Also, there is a column that does not provide any meaningful information, especially after the transformation renamed the values for annual average inflation rate as such. 
+```{r cleaning}
+#removing all characters from the year column other than numbers
+infl$year <- as.character(str_extract_all(infl$year, "[0-9]+"))
+
+#dropping the column that specifies annual average inflation (consumer prices) rate
+infl <- infl |> 
+  select(country_name, year, annual_average_inflation_rate)
+```
+
+
+### Analyze the data 
+The below analysis explores how to group and filter the data to give some meaningful insights.
+
+#### Current state
+First, we will take a look at the current state to guide the direction of the next steps.
+```{r analysis-current-state}
+#look at quantitative summary
+summary(infl$annual_average_inflation_rate)
+
+#how does the graph look
+ggplot(infl, aes(x = year, y = annual_average_inflation_rate)) +
+  geom_point(na.rm = TRUE) 
+```
+
+
+What are the biggest issues with this graph? It does not seem to show us anything meaningful. 2 things are clear: 
+
+1- The range of median to max values is causing the graph's distribution of values to be functionally unreadable. 
+
+2- The y-axis has too many values to read the labels.
+
+#### Remove hyperinflation
+The first analysis will include removing hyperinflation. EconLib defines the scale of hyperinflation, "Although the threshold is arbitrary, economists generally reserve the term 'hyperinflation' to describe episodes when the monthly inflation rate is greater than 50 percent." We will use this range and remove all values of annual inflation rates below -50 and above 50. The removed values will be explored later in our analysis.  
+```{r analysis-remove-hyperinflation}
+#filter out hyper inflation -50 to 50
+infl_no_hyp <- infl |>
+                  filter(
+                    annual_average_inflation_rate < 50,
+                    annual_average_inflation_rate > -50
+                  )
+
+#graph = too many years, lets slim it down
+ggplot(infl_no_hyp, aes(x = year, y = annual_average_inflation_rate)) +
+  geom_boxplot(aes(color = year), na.rm = TRUE) 
+```
+
+
+#### Rounding to decades
+The second issue with the graph is that there are too many years to give a readable visualization. Grouping years by there decades will help solve this.
+```{r analysis-decades}
+#round each year to the decade it is in to group data by decades
+infl_decades <- infl_no_hyp |>
+  group_by(year)
+infl_decades$year <- str_sub(infl_decades$year, start = 3, end = 3)
+infl_decades$year <- paste0(infl_decades$year, "0s")
+decades_order <- c('80s','90s','00s','10s','20s')
+
+#find the average of each decade for the graph
+infl_decades <- infl_decades |>
+  group_by(year) |>
+  mutate(
+    average_infl = mean(annual_average_inflation_rate)
+  )
+
+
+#graph
+ggplot(infl_decades, aes(x = factor(year, level = decades_order), y = annual_average_inflation_rate)) +
+  geom_boxplot(aes(color = year), na.rm = TRUE) + 
+  geom_point(aes(y = average_infl), shape = 21)
+```
+
+
+#### Dive into hyperinflation 
+Now let's take a look at the hyperinflation values that were removed.
+```{r analysis-hyperinflation-dive}
+#all hyperinflation
+infl_hyp <- infl |>
+  filter(
+    annual_average_inflation_rate >= 50
+  )
+
+ggplot(infl_hyp, aes(x = annual_average_inflation_rate)) +
+  ggtitle("All Hyperinflation") + 
+  geom_histogram(bins = 100)
+
+#low hyp
+infl_hyp <- infl |>
+  filter(
+    annual_average_inflation_rate >= 50,
+    annual_average_inflation_rate <= 600
+  )
+
+ggplot(infl_hyp, aes(x = annual_average_inflation_rate)) +
+  ggtitle("Majority Hyperinflation") + 
+  geom_histogram(bins = 15)
+```
+
+
+The All Hyperinflation graph shows that the distribution of hyperinflation values is wildly skewed. Because of this, we drill into the first bin on that graph. Those drilled values are what is shown on the Majority Hyperinflation histogram. 
+
+
+### Analysis summary and conclusions
+#### Variance and averages over decades:
+The analysis performed tells a story. The hyperinflation-excluding box plot visualization shows that the variance in annual average inflation rates has mostly decreased over the decades. Along with this information, the average inflation rates has decreased steadily between the 1980s and the 2010s, and then increases in the 2020s. This is a great measure for global economic status. As EconLib states, "Most economists agree that inflation lowers economic welfare even when allowing for revenue from the inflation tax and the distortion that would be created by alternative taxes that raise the same revenue." This means we can take the boxplot visualization as one measure of global welfare, with larger counts of higher inflation to mean worse welfare in some countries. 
+
+#### Hyperinflation:
+With the hyperinflation graph, we can see the frequency that different levels of hyperinflation have occurred globally in the past 40 or so years. Hyperinflation is caused when a governing power faces pressure to pay money they do not have, and solve by effectively printing more money. This devalues the currency and causes more money to need to be printed. The cycle continues until the original currency approaches functional worthlessness. In our analysis above, it looks like the cases of hyperinflation are most common between rates of 50 and 130, with few cases existing above 600. From this, we can infer that it is more common for inflation to stay the same or decrease than it is for inflation to continue rising after it reaches a rate of 130. 
+
+
+

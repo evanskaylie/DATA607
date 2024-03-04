@@ -1,0 +1,119 @@
+---
+title: "Tidy02"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Below is an analysis of milk consumption through time in the United States. We dive into the ebb and flow of milk preferences across time in the United States. We will explore data tidying, cleaning, and an analysis that discusses compelling narratives lurking within the creamy confines of dairy consumption trends with both historical and current impacts. The data was collected by the "USDA, Economic Research Service using data from various sources as documented on the Food Availability Data System home page" as noted at the bottom of the data set.
+
+
+### Import libraries
+Functions such as pivot_longer in tidyr and filter from dplyr are used in this analysis.
+```{r library-import}
+library(tidyverse)
+library(dplyr)
+```
+
+### Import data
+The data set is a csv file that is pulled from a GitHub link.
+```{r data-import}
+#reading in the data set to an object named after the milk data set (milk_raw)
+milk_raw <- read.csv("https://raw.githubusercontent.com/evanskaylie/DATA607/main/dyfluid%20-%20Fluidmilk.csv", header = FALSE)
+
+#preview data
+glimpse(milk_raw)
+```
+
+
+### Tidy the data set
+This data set is untidy because each column has multiple headings that should each be their own column. One column is not a feature, it is multiple features. One row contains all observations taken in the a year. 
+
+
+The data needs to be cleaned a bit before it can be efficiently tidied. The extra rows will be dropped and the columns strategically renamed. Each column name contains the information that will turn into identifiers in new columns for that availability_lbs measure. 
+
+
+The first section of the column renames is either whole (for whole milk), lfs (for lower fat and skim milk), obm (for other beverages than milk), or sum (for the grand totals).
+```{r tidying}
+#start by cleaning each column
+milk_tidy <- milk_raw[-1:-7,]
+milk_tidy <- milk_tidy[-114:-121,]
+
+#rename each column
+milk_tidy <- milk_tidy |> 
+  rename(
+    year = "V1",
+    population = "V2",
+    whole_plain_consumedWhereProduced = "V3",
+    whole_plain_sales = "V4",
+    whole_plain_total = "V5",
+    whole_flavored_total = "V6",
+    whole_all_total = "V7",
+    lfs_plainTwoPercent_total = "V8", 
+    lfs_plainOnePercent_total = "V9",
+    lfs_plain_total = "V10",
+    lfs_flavoredOtherThanWhole_total = "V11",
+    lfs_plainAndFlavored_total = "V12",
+    lfs_buttermilk_total = "V13",
+    lfs_skimMilk_total = "V14",
+    lfs_skimAndButtermilk_consumedWhereProduced = "V15",
+    lfs_all_total = "V16",
+    obm_eggnog_total = "V17",
+    obm_miscellaneous_total = "V18",
+    obm_all_total = "V19",
+    sum_all_sales = "V20",
+    sum_all_availability = "V21"
+  ) 
+
+#pivot the data frame longer
+milk_tidy <- milk_tidy |>
+  pivot_longer(
+    cols = !c(year, population),
+    names_to = "milks",
+    values_to = "availability_lbs"
+  ) 
+
+#pivot the data frame wider
+milk_tidy <- milk_tidy |> 
+  separate_wider_delim(milks, delim = "_", names = c("category", "type", "value_type")) |>
+  mutate(availability_lbs = gsub("[^0-9]", "", availability_lbs))
+```
+
+
+### Clean the data set 
+More cleaning needs to be done before the analysis. The year column should be doubles and the availability column should be integers. 
+```{r cleaning}
+#year should be date (double)
+yr <- as.Date(milk_tidy$year, format = "%Y")
+milk_tidy$year <- year(yr)
+
+#availability should be number (int)
+milk_tidy$availability_lbs <- as.integer(milk_tidy$availability_lbs)
+
+#remove the sum for a visualization
+totals_only <- milk_tidy |>
+  filter(
+    value_type == "total"
+  )
+```
+
+
+### Analyze the data 
+The below analysis explores how consumption looks for different milk categories.
+```{r analysis-current-state}
+#look at quantitative summary
+summary(totals_only$availability_lbs)
+
+#how does the graph look
+ggplot(totals_only) +
+  geom_smooth(aes(x = year, y = availability_lbs, color = category), na.rm = TRUE, method = loess, formula = y ~ x) + 
+  geom_point(aes(x = year, y = availability_lbs, color = category, alpha = 0.05), na.rm = TRUE) 
+```
+
+### Analysis summary and conclusions
+This captivating visualization unveils intriguing trends in milk consumption patterns across decades, shedding light on shifting preferences in milk types. Notably, the apex of milk consumption in the 1960s serves as the peak of an era where whole milk reigned supreme. However, a remarkable transition unfolds thereafter, as the allure of whole milk gradually wanes, giving way to the ascension of lower fat and skim milk popularity by the late 1990s. This transformation aligns with the rise in popularity of dieting culture in the 1990s, wherein emphasis shifted towards weight-conscious alternatives to previous dietary norms. Moreover, a more currently relevant observation emerges post-mid-2000s, revealing an overarching decline in milk consumption across all variants. Such findings prompt deeper reflection on socio-cultural influences, dietary trends, and the dynamic interplay between consumer behaviors and health consciousness.

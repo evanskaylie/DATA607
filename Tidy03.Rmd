@@ -1,0 +1,126 @@
+---
+title: "Tidy03"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Below is an analysis of global population metrics through time. We will explore data tidying, cleaning, and an analysis with a focus on calculated population density. The data was collected by the United States census and the UN's corresponding data. The questions to answer are: how does world population change over time and how does density of a country's population play into that?
+
+### Import libraries
+Functions such as pivot_longer in tidyr and filter from dplyr are used in this analysis.
+```{r library-import}
+library(tidyverse)
+library(dplyr)
+```
+
+### Import data
+The data set is a csv file that is pulled from a GitHub link.
+```{r data-import}
+#reading in the data set to an object named after the population data set (pop_raw)
+pop_raw <- read.csv("https://raw.githubusercontent.com/evanskaylie/DATA607/main/world_population_data.csv")
+
+#preview data
+glimpse(pop_raw)
+```
+
+
+### Tidy the data set
+This data set is untidy each year is a column. This is untidy as in this case, years should not be features of observations. Rather, each year should be its own observation. Tidying this data will have a column for year rather than 7 year columns. Each row will be a single observation for each country and year.
+```{r tidying}
+#pivot the years to a single column
+pop_tidy <- pop_raw |>
+  pivot_longer(
+    cols = c(X1980, X2000, X2010, X2021, X2022, X2030, X2050),
+    names_to = "year",
+    values_to = "population"
+  ) 
+```
+
+
+### Clean the data set 
+Not only was this data not tidy, but it could use some cleaning. The year values include an X in front of each number. Also, there is a column X that does not provide any meaningful information. 
+```{r cleaning}
+#convert year to a clean double
+pop_tidy$year <- as.character(str_extract_all(pop_tidy$year, "[0-9]+"))
+yr <- as.Date(pop_tidy$year, format = "%Y")
+pop_tidy$year <- year(yr)
+
+#drop column X
+pop_tidy <- pop_tidy |>
+  mutate(X = NULL)
+```
+
+
+### Analyze the data 
+Some transformations can be done to this data to make it more powerful. Population density by km will be calculated as pop_land so populations can be compared to each other and their densities. These densities will be separated into quartiles for summary graphs. 
+```{r analysis-prep}
+#population per km area for each country 
+pop_land <- pop_tidy |>
+  mutate(
+    pop_land_ratio = population /landAreaKm
+  ) 
+
+#cluster time! create quartiles for each of the groups
+summary(pop_land$pop_land_ratio)
+
+#calculate quartile boundaries
+quartiles <- quantile(pop_land$pop_land_ratio, probs = seq(0, 1, 0.25))
+
+#create quartile categories
+pop_land$density_quartile <- cut(pop_land$pop_land_ratio, breaks = quartiles, labels = c("lowest", "low", "mid", "high"))
+```
+
+
+### What is this, Graph City??
+Each graph or cluster of graphs tells different aspects meaningful to the analysis. 
+
+
+The below graph shows total population steadily increasing proportional to time. 
+```{r analysis-visualizations-totals}
+#total pop change over time, showing how each quartile contributes to total population
+ggplot(pop_land, aes(x = year, y = population)) +
+  geom_col(aes(color = density_quartile, linewidth = 4), na.rm = TRUE) 
+```
+
+
+These clusters of graphs show the breakdown of each density quartile year over year.
+```{r analysis-visualizations-dodged}
+#dodged graph
+ggplot(pop_land, aes(x = year, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge')
+
+#dodged graphs by year
+pop_land |> filter(year == 1980) |>
+  ggplot(aes(x = density_quartile, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge') + 
+  ggtitle("1980 population by density")
+  
+pop_land |> filter(year == 2000) |>
+  ggplot(aes(x = density_quartile, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge') + 
+  ggtitle("2000 population by density")
+
+pop_land |> filter(year == 2010) |>
+  ggplot(aes(x = density_quartile, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge') + 
+  ggtitle("2010 population by density")
+
+pop_land |> filter(year == 2021) |>
+  ggplot(aes(x = density_quartile, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge') + 
+  ggtitle("2021 population by density")
+
+pop_land |> filter(year == 2022) |>
+  ggplot(aes(x = density_quartile, y = population, fill = density_quartile)) + 
+  geom_col(position = 'dodge') + 
+  ggtitle("2022 population by density")
+```
+
+### Analysis summary and conclusions
+Through the above visualizations, a plethora of insights emerge regarding global population dynamics. The focus on this approach is the quartiles of population density. How much do different densities contribute to world population? The initial graph unveils a fascinating narrative: while the lowest population density remains relatively stable, the most remarkable surge in total population emanates from the top three quartiles, with the densest quartile exhibiting the most pronounced increase. Subsequent graphs delve deeper into this phenomenon, showing how this ratio has shifted through time. Notably, a recurring pattern emerges: the second-highest quartile consistently emerges as the primary driver of population growth. This revelation underscores the enduring significance of this quartile in shaping global demographic trends.

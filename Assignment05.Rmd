@@ -1,0 +1,49 @@
+---
+title: "Week7 Assignment"
+author: "Kaylie Evans"
+date: "2024-03-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+#### On the books:
+I chose 3 books on one of my favorite subjects, Quantum Mechanics. Timeline by Michael Crichton was the first time I was exposed to physics of this kind and sparked my interest, leading me to college for Astro Physics (a cousin of quantum mechanics). Introduction to Quantum Mechanics by David J. Griffiths and Darrell F. Schroeter is a textbook I read to give me a better understanding of the quantitative side of such a theoretical topic. The final book here is a crowd favorite for this topic, Dark Matter by Blake Crouch. This is a much more eerie and philosophical take on this side of physics. Each book is special in their own way. 
+
+#### On the code:
+The below code attempts to take three different formats of the same table containing the columns title, author, genre, fiction vs non-fiction, and best aspect. 
+
+
+## Import Libraries
+```{r setup-libraries}
+library(xml2)
+library(jsonlite)
+```
+
+
+## Read all files
+```{r file-read}
+#xml read and converting to text
+xml_raw <- read_xml("https://raw.githubusercontent.com/evanskaylie/DATA607/main/Books.xml")
+books_xml <- xml_raw |> 
+  xml_text() |>
+  as.data.frame()
+
+#html read and converting to text
+html_raw <- read_html("https://raw.githubusercontent.com/evanskaylie/DATA607/main/Books.html")
+books_html <- html_raw |> 
+  xml_text() |> 
+  as.data.frame()
+
+#json read and adjusting name
+json_raw <- fromJSON("https://raw.githubusercontent.com/evanskaylie/DATA607/main/Books.json")
+books_json <- json_raw
+```
+
+## Analysis
+#### Are the three data frames identical?
+
+The three data frames do not look the same. The HTML file came in with a ton of information outside of the table from its conversion. The XML file also has a different format that R seems to not have been able to read. The JSON file looks like the original table did. 

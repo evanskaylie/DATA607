@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<table>
+	<row>
+		<title>Timeline</title>
+		<author>Michael Crichton</author>
+		<genre>Sci-Fi</genre>
+		<fictionVsNonFiction>Fiction</fictionVsNonFiction>
+		<bestAspect>Time Travel</bestAspect>
+	</row>
+	<row>
+		<title>Introduction to Quantum Mechanics</title>
+		<author>David J. Griffiths, Darrell F. Schroeter</author>
+		<genre>Textbook</genre>
+		<fictionVsNonFiction>Non-fiction</fictionVsNonFiction>
+		<bestAspect>Quantum Dynamics</bestAspect>
+	</row>
+	<row>
+		<title>Dark Matter</title>
+		<author>Blake Crouch</author>
+		<genre>Psychological Fiction</genre>
+		<fictionVsNonFiction>Fiction</fictionVsNonFiction>
+		<bestAspect>Alternate Timelines</bestAspect>
+	</row>
+</table>

@@ -1,0 +1,66 @@
+---
+title: "Assignment06"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+The goal of this RMD is to take one of the New York Times APIs, construct an interface in R to read in the JSON data and transform it into an R DataFrame. The NYT API that was chosen is the Books API and the data to be taken out of that is the current best sellers list for graphic books and manga.
+
+## Import Libraries
+```{r library-import}
+library(tidyverse) 
+library(jsonlite)
+library(httr)
+```
+
+## Import Web API
+```{r api-import}
+# this API key was assigned to my account on Times Developers
+api_key <- "q3Ei9rbguhYDwWjqyiAC1sw19y5wSgx9"
+
+# url from API site
+books_url <- paste0("https://api.nytimes.com/svc/books/v3/lists/current/graphic-books-and-manga.json?api-key=", api_key)
+
+# response with httr's GET
+response <- GET(books_url)
+
+# translate json encoding
+json_data <- content(response, "text", encoding = "UTF-8")
+parsed_data <- fromJSON(json_data)
+
+#take a look at the data to see what transformation needs to be done
+glimpse(parsed_data)
+```
+
+## Transform JSON Format to R Data Frame
+From the above glimpse(), it is clear that there are 2 lists that need to be unnested: 
+
+.. ..$ isbns               :List of 15
+.. ..$ buy_links           :List of 15
+
+The Results list contains another list called Books. The data below comes directly from the Books list so the Results list does not need to be unnested.
+```{r transformation-flatten}
+# take the subgroup books from results as that has the data we are interested in
+books_df <- parsed_data$results$books
+
+# flatten the nested structures within the 'isbns' column
+books_df <- unnest(books_df, isbns)
+
+# flatten the nested structures within the 'buy_links' column
+books_df <- unnest(books_df, buy_links)
+
+#check the data frame
+glimpse(books_df)
+
+```
+
+
+## Conclusion
+
+The data frame is translated correctly in R, containing 144 rows and 28 columns. More cleaning and transformation would need to be done for a simple analysis; however, that is out of the scope of this markdown.

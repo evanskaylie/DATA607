@@ -1,0 +1,71 @@
+---
+title: "Assignment08"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The recommender system chosen here is the TikTok For You Page. The For You Page (FYP) is the landing page when a user opens the TikTok app that presents a customized stream of videos sourced from both creators users may not yet follow and videos from creators the user does follow. These selections are tailored by TikTok's algorithm to match users' interests and previous engagements.
+
+The source for this analysis is mostly from the following website: <https://www.tiktok.com/transparency/en-us/recommendation-system/> 
+
+
+## Identifying the Recommender System Website
+
+The recommender system website is the app TikTok <https://www.tiktok.com/login/download-app>
+
+## Scenario Design
+
+For this recommender system, it makes more sense to perform scenario design once for the organization. This is due to the fact that the system relies so heavily on the user interactions to create the recommendations.
+
+  
+#### Who are your target users?
+The website is talking to “you,” its target users. This is anyone that uses TikTok. The recommender system is the “For You feed, which is an experience intended for a range of audiences, from teenagers to great grandparents”
+
+#### What are their key goals?
+The primary goal is to curate and present videos that resonate with the user's preferences. TikTok's overarching aim appears to center around delivering captivating content tailored to individual tastes, fostering an addictive user experience that prolongs engagement and encourages frequent return visits to the platform.
+
+#### How can you help them accomplish these goals?
+The FYP is the key to this. Showing videos to the user that they will like comes from a sophisticated algorithm that can update based on a user’s changing desires, ensuring that the videos presented align closely with their current interests and preferences.
+
+
+## Reverse Engineering
+
+The system operates by collecting user signals, employing a machine learning algorithm to rank videos, and determining which videos to present to the user and in what sequence. It also prioritizes adherence to Community Guidelines, ensuring that teenagers have a safe and age-appropriate experience, and incorporates a moderation system to maintain content safety.
+
+
+TikTok considers various factors, or signals, when deciding which videos to feature on the FYP:
+-   Geographic region, tailoring recommendations to local standards and cultural norms.
+-   Language settings of the user's device.
+-   Operating system of the user's device.
+-   Recent user interactions with videos, including views, completions, likes, and skips.
+-   User's connections and follow relationships with other TikTok users.
+
+The interactions that the “algorithm” is reported to care about are as follows:
+-   Liking, sharing, commenting on, or marking a video as 'Not Interested.'
+-   Following the video's creator or engaging with their profile.
+-   Watching, skipping, or favoriting a video.
+-   The amount of time spent viewing a video.
+-   Tapping on the video's soundtrack.
+
+## Reccomendations on Improving the Recommendation Capabilities
+
+From personal experience, I would suggest there to be a feature that allows you to add and to mute general content to your FYP. 
+
+#### Adding content: 
+For instance, maybe you started watching a new show and want to see content that involves that show. 
+    There are currently 2 workarounds for this: 
+       1.  Following specific creators that make content similar to what you want to see 
+       2.  Using the search feature to filter for only this content, then interact with those videos
+
+#### Muting content: 
+Similarly, perhaps you are behind on a show and don’t want to see spoilers when you scroll. 
+    
+#### Suggested solution:
+There should be a straightforward way that you can flag that you want to see more of a certain type of content or temporarily mute content. This would be a feature enhancement.

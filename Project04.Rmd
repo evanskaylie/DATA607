@@ -1,0 +1,154 @@
+---
+title: "Project04"
+author: "Kaylie Evans"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Using a data set of labeled spam and ham (non-spam) e-mails, a predictive classifier tool is made that predicts if a new document is spam. This project explores document classification, aiming to boost productivity and organize information better.
+
+## Load libraries
+
+```{r load-libraries}
+library(utils)
+library(stringr)
+library(tidyverse)
+library(tm)
+library(e1071)
+```
+
+## Import data
+
+While I always prefer to use a method that pulls the data through GitHub so it is reproducible on any device, I could not figure out how to do that (or a substitute of that) with folders that have so many files. This method pulls it from the file paths on the computer that this RMD was written on.
+
+```{r save-data-path}
+#save paths that the folders containing the emails are saved under on my device
+ham_path <- "/Users/kaylieevans/Documents/DATA607/Project04/SpamHam/easy_ham"
+spam_path <- "/Users/kaylieevans/Documents/DATA607/Project04/SpamHam/spam_2"
+
+#create a function that reads the file and returns the contents as a list
+import_raw_emails <- function(folder_path) {
+  raw_files <- list.files(folder_path, full.names = TRUE)
+  raw_emails <- lapply(raw_files, function(file) {
+    raw_emails <- readLines(file, encoding = "latin1")
+    paste(raw_emails, collapse = "\n")
+  })
+  return(raw_emails)
+}
+
+#save spam and ham emails with this function
+spam_raw <- import_raw_emails(spam_path)
+ham_raw <- import_raw_emails(ham_path)
+```
+
+```{r save-data-frame}
+#create a combined data frame with email contents and a flag for spam or ham
+emails <- bind_rows(
+  spam_emails <- map_df(spam_raw, ~ data.frame(email_content = .x, spam_or_ham_fg = "spam", stringsAsFactors = FALSE)),
+  ham_emails <- map_df(ham_raw, ~ data.frame(email_content = .x, spam_or_ham_fg = "ham", stringsAsFactors = FALSE))
+)
+```
+
+```{r explore-data}
+#how many spam and ham emails 
+table(emails$spam_or_ham_fg)
+
+#what does a single observation look like
+emails$email_content[1400]
+```
+
+## Clean and Transform the Data
+
+#### Widen the data frame
+
+From the above email, there seems to be an escape key. Let's try to take each of these breaks and make them new columns.
+
+#### Trying delimiter
+
+```{r widen-data-delimiter}
+#saving the first 30 delimited columns
+df_wide <- separate(emails, email_content, into = paste0("text_", 1:30), sep = "\n")
+
+#check on the data frame
+head(df_wide)
+```
+
+Delimiting by this does not give an even break between columns. This may be because the emails that are missing content from some columns do not have empty space between escape keys for those columns. **Let's go back to the last iteration for this project**, before the widening.
+
+### Create Corpus
+
+Using the tm package, the VCorpus function is used.
+
+```{r create-corpus}
+#save corpus as email_corpus
+email_corpus <- VCorpus(VectorSource(emails$email_content))
+
+#check the corpus
+writeLines(head(strwrap(email_corpus[[1]]), 3))
+```
+
+```{r clean-corpus}
+#removing punctuation with tm_map
+email_corpus <- tm_map(email_corpus, removePunctuation)
+
+#removing numbers with tm_map
+email_corpus <- tm_map(email_corpus, removeNumbers)
+
+#removing white space with tm_map
+email_corpus <- tm_map(email_corpus, stripWhitespace)
+
+#removing english stop words with tm_map
+email_corpus <- tm_map(email_corpus, removeWords, stopwords("english"))
+
+#stem with tm_map
+email_corpus <- tm_map(email_corpus, stemDocument)
+
+#convert to lowercase
+email_corpus <- lapply(email_corpus, function(x) {tolower(x)})
+```
+
+### Create Document Term Matrix
+
+```{r dtm}
+#create dtm as email_dtm
+email_dtm <- DocumentTermMatrix(email_corpus)
+
+#check the contents
+tm::inspect(email_dtm)
+```
+
+## Machine Learning \|\| Naïve Bayes Classifier
+
+For this section, the goal is to use R libraries to create a ML algorithm that can categorize an email as accurately as possible. It should be trained on a chunk of the data that is available and tested on the unused data.
+
+In ML, it is common to use an 80/20 split, where 80% of the data is used to train and 20% to check the model. The reason 100% of the data isn't used is to prevent overfitting.
+
+The classifier used here is the Naïve Bayes classifier, "a probabilistic approach based on Bayes’ theorem with the assumption of independence between features" (*GeeksforGeeks.org*). It is often used for sentiment analysis, which is useful in this classification project.
+
+```{r ML-city}
+#splitting the data into training and testing sets
+set.seed(64)
+train_index <- sample(1:nrow(emails), 0.8 * nrow(emails))
+train_data <- emails[train_index, ]
+test_data <- emails[-train_index, ]
+
+#train the Naïve Bayes model
+model <- naiveBayes(spam_or_ham_fg ~ ., data = train_data)
+
+#predict on test data with predict function
+predictions <- predict(model, newdata = test_data)
+
+#check accuracy
+accuracy <- mean(predictions == test_data$spam_or_ham_fg)
+accuracy
+```
+
+## Conclusion
+
+In conclusion, the Naïve Bayes classifier achieved an accuracy of 63% in categorizing emails as spam or ham. While this accuracy may not be considered high, it indicates that the model is performing better than random guessing. Further improvements can be made by exploring different preprocessing techniques, feature engineering, and trying alternative machine learning algorithms. Overall, this project provides valuable insights into document classification and lays the groundwork for future learning.
